@@ -13,9 +13,11 @@ General procedure steps:
 git clone git@github.com:fibbery/douban_zufang.git
 ```
 2. init the database
+in the work directory, use the mysql client connect to the mysql server, execute sql like below:
 ```mysql
 source db.sql
 ```
+this operate will create database, table, and user.
 3. start program
 ```shell script
  go run main.go 

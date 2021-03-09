@@ -12,3 +12,6 @@ CREATE TABLE `TopicInfo`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8;
 
+create user 'douban'@'%' identified by 'douban@123';
+
+grant all on douban_zufang.* to 'douban'@'%';
