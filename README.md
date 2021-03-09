@@ -20,11 +20,11 @@ source db.sql
 this operate will create database, table, and user.
 3. start program
 ```shell script
- go run main.go 
+ go run main.go & > runtime.log
 ```
 or 
 ```shell script
-go run main.go -conf conf.toml
+go run main.go -conf conf.toml & > runtime.log
 ```
 
 ## About Conf
