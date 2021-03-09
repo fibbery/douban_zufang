@@ -4,20 +4,24 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/fibbery/douban_zufang/model"
-	"github.com/fibbery/douban_zufang/resp"
-	"github.com/gocolly/colly"
-	"log"
 	"math/rand"
-	url2 "net/url"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	url2 "net/url"
+
 	"github.com/fibbery/douban_zufang/g"
+	"github.com/fibbery/douban_zufang/model"
+	"github.com/fibbery/douban_zufang/resp"
 	"github.com/fibbery/douban_zufang/utils"
+	"github.com/gocolly/colly"
+
+	"github.com/fibbery/douban_zufang/logger"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -28,12 +32,14 @@ var (
 func init() {
 	conf = flag.String("conf", "conf.toml", "configuration file")
 	flag.Parse()
+
+	aconf()
+	pconf()
+	logger.ParseConfig(nil)
+	g.InitDB()
 }
 
 func main() {
-	aconf()
-	pconf()
-	g.InitDB()
 
 	// 生成colly采集器
 	c := colly.NewCollector(
@@ -64,12 +70,12 @@ func main() {
 		if strings.Contains(response.Headers.Get("Content-Type"), "application/json") {
 			page := &resp.Page{}
 			if err := json.Unmarshal(response.Body, page); err != nil {
-				log.Printf("unmarshal json error , url is %s, error is %v", response.Request.URL, err)
+				log.Infof("unmarshal json error , url is %s, error is %v", response.Request.URL, err)
 			} else {
 				for i := 0; i < len(page.Items); i++ {
 					err := c.Visit(page.Items[i].List.URL)
 					if err != nil {
-						log.Printf("action: request doulist html page error, url: %s, error: %+v\n", page.Items[i].List.URL, err)
+						log.Errorf("action: request doulist html page error, url: %s, error: %+v", page.Items[i].List.URL, err)
 					}
 				}
 			}
@@ -84,7 +90,7 @@ func main() {
 
 	// stop
 	c.Wait()
-	log.Println("colly stop!!!")
+	log.Info("colly stop!!!")
 }
 
 /**
@@ -110,7 +116,7 @@ func vistDoulist(c *colly.Collector, doc *colly.HTMLElement) {
 		url := fmt.Sprintf(g.TopicUrl, topicId)
 		err := c.Visit(url)
 		if err != nil {
-			log.Printf("action: request topic info html page error,  url : %s, error : %+v", url, err)
+			log.Errorf("action: request topic info html page error,  url : %s, error : %+v", url, err)
 		}
 	})
 
@@ -118,7 +124,7 @@ func vistDoulist(c *colly.Collector, doc *colly.HTMLElement) {
 	if current+g.DouListPageSize < size {
 		err := c.Visit(fmt.Sprintf(g.DouListUrl, douListId, current+g.DouListPageSize))
 		if err != nil {
-			log.Printf("action: request doulist html page error,  url : %s, error : %+v", url, err)
+			log.Errorf("action: request doulist html page error,  url : %s, error : %+v", url, err)
 		}
 	}
 }
@@ -135,24 +141,24 @@ func vistTopic(c *colly.Collector, doc *colly.HTMLElement) {
 		Createtime: createTime,
 	}
 	if createTime.After(time.Now().AddDate(0, -g.Config.User.ExpireDay, 0)) {
-		log.Printf("topic [%+v] has expire, will not store\n", topic)
+		log.Warnf("topic [%+v] has expire, will not store", topic)
 	} else {
 		g.DB.Table("TopicInfo").Save(&topic)
-		log.Printf("topic [%+v] is new, will store\n", topic)
+		log.Infof("topic [%+v] is new, will store", topic)
 	}
 
 	//继续访问收藏该文章的豆列
 	url := fmt.Sprintf(g.TopicCollectUrl, topic.ID)
 	err := c.Visit(url)
 	if err != nil {
-		log.Printf("action: request topic collect doulist json error,  url : %s, error : %+v", url, err)
+		log.Errorf("action: request topic collect doulist json error,  url : %s, error : %+v", url, err)
 	}
 
 }
 
 func pconf() {
 	if err := g.Parse(*conf); err != nil {
-		log.Printf("parse configuration file error, %v", err)
+		log.Infof("parse configuration file error, %v", err)
 		os.Exit(1)
 	}
 }
@@ -161,6 +167,6 @@ func aconf() {
 	if *conf != "" && utils.IsExsit(*conf) {
 		return
 	}
-	log.Println("configuration file is not exist!!!")
+	log.Info("configuration file is not exist!!!")
 	os.Exit(1)
 }
