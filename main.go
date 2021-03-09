@@ -65,6 +65,7 @@ func main() {
 
 	})
 
+	//todo 这里处理好像有点问题，并没有访问对应的doulist，看看是不是和onhtml冲突了
 	c.OnResponse(func(response *colly.Response) {
 		// 硬编码处理，访问豆列请求体
 		if strings.Contains(response.Headers.Get("Content-Type"), "application/json") {
@@ -140,7 +141,7 @@ func vistTopic(c *colly.Collector, doc *colly.HTMLElement) {
 		Title:      doc.ChildText("h1"),
 		Createtime: createTime,
 	}
-	if createTime.After(time.Now().AddDate(0, -g.Config.User.ExpireDay, 0)) {
+	if createTime.After(time.Now().AddDate(0, 0, -g.Config.User.ExpireDay)) {
 		log.Warnf("topic [%+v] has expire, will not store", topic)
 	} else {
 		g.DB.Table("TopicInfo").Save(&topic)
