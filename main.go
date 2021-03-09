@@ -9,8 +9,10 @@ import (
 	"github.com/gocolly/colly"
 	"log"
 	"math/rand"
+	url2 "net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -67,7 +69,7 @@ func main() {
 				for i := 0; i < len(page.Items); i++ {
 					err := c.Visit(page.Items[i].List.URL)
 					if err != nil {
-						log.Printf("vist url error: %+v\n", err)
+						log.Printf("action: request doulist html page error, url: %s, error: %+v\n", page.Items[i].List.URL, err)
 					}
 				}
 			}
@@ -89,12 +91,36 @@ func main() {
  * 访问豆列，从而获取豆列中的文章
  */
 func vistDoulist(c *colly.Collector, doc *colly.HTMLElement) {
+	size, _ := strconv.Atoi(strings.TrimFunc(doc.ChildText("div.doulist-filter > a.active > span"), func(r rune) bool {
+		return r == '(' || r == ')'
+	}))
+
+	//判断当前页的offset
+	current := 0
+	url, _ := url2.Parse(doc.Request.URL.String())
+	douListId := numReg.FindString(url.Path)
+	if url.RawQuery != "" && strings.Contains(url.RawQuery, "start") {
+		current, _ = strconv.Atoi(numReg.FindString(url.RawQuery))
+	}
+
 	doc.ForEach("div.bd.doulist-note", func(_ int, element *colly.HTMLElement) {
 		//目标主题
 		href := element.ChildAttr(".title > a", "href")
 		topicId := numReg.FindString(href)
-		_ = c.Visit(fmt.Sprintf(g.TopicUrl, topicId))
+		url := fmt.Sprintf(g.TopicUrl, topicId)
+		err := c.Visit(url)
+		if err != nil {
+			log.Printf("action: request topic info html page error,  url : %s, error : %+v", url, err)
+		}
 	})
+
+	//判断是否需要获取下一页doulist
+	if current+g.DouListPageSize < size {
+		err := c.Visit(fmt.Sprintf(g.DouListUrl, douListId, current+g.DouListPageSize))
+		if err != nil {
+			log.Printf("action: request doulist html page error,  url : %s, error : %+v", url, err)
+		}
+	}
 }
 
 /**
@@ -115,8 +141,13 @@ func vistTopic(c *colly.Collector, doc *colly.HTMLElement) {
 		log.Printf("topic [%+v] is new, will store\n", topic)
 	}
 
-	//继续访问收藏改文章的豆列
-	_ = c.Visit(fmt.Sprintf(g.TopicCollectUrl, topic.ID))
+	//继续访问收藏该文章的豆列
+	url := fmt.Sprintf(g.TopicCollectUrl, topic.ID)
+	err := c.Visit(url)
+	if err != nil {
+		log.Printf("action: request topic collect doulist json error,  url : %s, error : %+v", url, err)
+	}
+
 }
 
 func pconf() {
