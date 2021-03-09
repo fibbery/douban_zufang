@@ -9,29 +9,32 @@ import (
 )
 
 type ConfigToml struct {
-	User *UserConfig `toml:"user"`
-	Http *HttpConfig `toml:"http"`
-	DB   *DBConfig   `toml:"db"`
+	User *UserConfig `mapstructure:"user"`
+	Http *HttpConfig `mapstructure:"http"`
+	DB   *DBConfig   `mapstructure:"db"`
 }
 
 type UserConfig struct {
 	// 起始 主题
-	Topic string `toml:"topic"`
+	Topic string `mapstructure:"topic"`
+
+	// 起始 豆列
+	DouList string `mapstructure:"dou_list"`
 
 	// 文档过期时间 : 天
-	ExpireDay int `toml:"expire_day"`
+	ExpireDay int `mapstructure:"expire_day"`
 }
 
 type HttpConfig struct {
 	// http请求间隔
-	Interval int `toml:"interval"`
+	Interval int `mapstructure:"interval"`
 
 	// 浏览器标识
-	Agents []string `toml:"agents"`
+	Agents []string `mapstructure:"agents"`
 }
 
 type DBConfig struct {
-	Dsn string `toml:"dsn"`
+	Dsn string `mapstructure:"dsn"`
 }
 
 var (
@@ -51,7 +54,6 @@ func Parse(cpath string) error {
 
 	//set default
 	viper.SetDefault("http.port", 8080)
-
 	err = viper.Unmarshal(&Config)
 	if err != nil {
 		return fmt.Errorf("unmarshal %v", err)

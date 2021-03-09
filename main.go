@@ -65,7 +65,6 @@ func main() {
 
 	})
 
-	//todo 这里处理好像有点问题，并没有访问对应的doulist，看看是不是和onhtml冲突了
 	c.OnResponse(func(response *colly.Response) {
 		// 硬编码处理，访问豆列请求体
 		if strings.Contains(response.Headers.Get("Content-Type"), "application/json") {
@@ -83,7 +82,7 @@ func main() {
 		}
 	})
 
-	startUrl := fmt.Sprintf(g.TopicUrl, g.Config.User.Topic)
+	startUrl := fmt.Sprintf(g.DouListUrl, g.Config.User.DouList, 0)
 	err := c.Visit(startUrl)
 	if err != nil {
 		log.Fatalf("visit start url : %s error: %+v", startUrl, err)
@@ -112,7 +111,7 @@ func vistDoulist(c *colly.Collector, doc *colly.HTMLElement) {
 
 	doc.ForEach("div.bd.doulist-note", func(_ int, element *colly.HTMLElement) {
 		//目标主题
-		href := element.ChildAttr(".title > a", "href")
+		href := element.ChildAttr("div.title > a", "href")
 		topicId := numReg.FindString(href)
 		url := fmt.Sprintf(g.TopicUrl, topicId)
 		err := c.Visit(url)
